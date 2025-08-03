@@ -107,14 +107,26 @@ namespace TodoList.Server.Controllers
             return NoContent();
         }
 
-        //Update
+        [HttpDelete("{int:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> DeleteTodo(int id)
+        {
+            if (!await _todoRepository.ExistsAsync(id))
+            {
+                return NotFound("Todo not found");
+            }
 
-        //Delete
+            await _todoRepository.DeleteAsync(id);
+            int saveResult = await _todoRepository.SaveAsync();
 
-        //Search
+            if (!(saveResult > 0))
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
 
-
-
-
+            return NoContent();
+        }
     }
 }

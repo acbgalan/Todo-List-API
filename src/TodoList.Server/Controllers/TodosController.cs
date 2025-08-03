@@ -52,7 +52,7 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> CreateTodo([FromBody] Todo todo)
+        public async Task<ActionResult> CreateTodo(Todo todo)
         {
             if (todo == null)
             {
@@ -69,6 +69,46 @@ namespace TodoList.Server.Controllers
 
             return CreatedAtRoute("GetTodo", new { id = todo.Id }, todo);
         }
+
+        [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult> Update(int id, Todo todo)
+        {
+            if (todo == null)
+            {
+                return BadRequest();
+            }
+
+            if (id != todo.Id)
+            {
+                return BadRequest("Id mismatch");
+            }
+
+            if (!await _todoRepository.ExistsAsync(id))
+            {
+                return NotFound("Todo not found");
+            }
+
+            await _todoRepository.UpdateAsync(todo);
+            int saveResult = await _todoRepository.SaveAsync();
+
+            if (!(saveResult > 0))
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError);
+            }
+
+            return NoContent();
+        }
+
+        //Update
+
+        //Delete
+
+        //Search
+
+
 
 
     }

@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
+using TodoList.Shared.Todo;
 
 namespace TodoList.Server.Controllers
 {
@@ -10,16 +12,18 @@ namespace TodoList.Server.Controllers
     public class TodosController : ControllerBase
     {
         private readonly ITodoRepository _todoRepository;
+        private readonly IMapper _mapper;
 
-        public TodosController(ITodoRepository todoRepository)
+        public TodosController(ITodoRepository todoRepository, IMapper mapper)
         {
             _todoRepository = todoRepository;
+            _mapper = mapper;
         }
 
         [HttpGet("{id:int}", Name = "GetTodo")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Todo>> GetTodo(int id)
+        public async Task<ActionResult<TodoResponse>> GetTodo(int id)
         {
             var todo = await _todoRepository.GetAsync(id);
 
@@ -28,13 +32,15 @@ namespace TodoList.Server.Controllers
                 return NotFound("Todo not found");
             }
 
-            return Ok(todo);
+            var todoResponse = _mapper.Map<TodoResponse>(todo);
+
+            return Ok(todoResponse);
         }
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<List<Todo>>> GetsTodo()
+        public async Task<ActionResult<List<TodoResponse>>> GetsTodo()
         {
             var todoList = await _todoRepository.GetAllAsync();
 
@@ -43,7 +49,9 @@ namespace TodoList.Server.Controllers
                 return NotFound("Todos not found");
             }
 
-            return Ok(todoList);
+            var todoListResponse = _mapper.Map<List<TodoResponse>>(todoList);
+
+            return Ok(todoListResponse);
         }
 
 
@@ -52,62 +60,64 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> CreateTodo(Todo todo)
+        public async Task<ActionResult> CreateTodo(CreateTodoRequest createTodoRequest)
         {
-            if (todo == null)
+            if (createTodoRequest == null)
             {
                 return BadRequest();
             }
+
+            var todo = _mapper.Map<Todo>(createTodoRequest);
 
             await _todoRepository.AddAsync(todo);
             int saveResult = await _todoRepository.SaveAsync();
 
             if (!(saveResult > 0))
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "");
+                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
             }
 
-            return CreatedAtRoute("GetTodo", new { id = todo.Id }, todo);
+            var todoResponse = _mapper.Map<TodoResponse>(todo);
+
+            return CreatedAtRoute("GetTodo", new { id = todo.Id }, todoResponse);
         }
 
         [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> UpdateTodo(int id, Todo todo)
+        public async Task<ActionResult> UpdateTodo(int id, UpdateTodoRequest updateTodoRequest)
         {
-            if (todo == null)
+            if (updateTodoRequest == null)
             {
                 return BadRequest();
             }
 
-            if (id != todo.Id)
+            if (id != updateTodoRequest.Id)
             {
                 return BadRequest("Id mismatch");
             }
 
-            var todoDb = await _todoRepository.GetAsync(id);
+            var todo = await _todoRepository.GetAsync(id);
 
-            if (todoDb == null)
+            if (todo == null)
             {
                 return NotFound("Todo not found");
             }
 
-            todoDb.Title = todo.Title;
-            todoDb.Description = todo.Description;
-
-            await _todoRepository.UpdateAsync(todoDb);
+            todo = _mapper.Map(updateTodoRequest, todo);
+            await _todoRepository.UpdateAsync(todo);
             int saveResult = await _todoRepository.SaveAsync();
 
             if (!(saveResult > 0))
             {
-                return StatusCode(StatusCodes.Status500InternalServerError);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
             }
 
             return NoContent();
         }
 
-        [HttpDelete("{int:int}")]
+        [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -123,7 +133,7 @@ namespace TodoList.Server.Controllers
 
             if (!(saveResult > 0))
             {
-                return StatusCode(StatusCodes.Status500InternalServerError);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
             }
 
             return NoContent();

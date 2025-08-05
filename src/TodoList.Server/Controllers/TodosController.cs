@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
+using TodoList.Shared.Todo;
 
 namespace TodoList.Server.Controllers
 {
@@ -10,16 +12,18 @@ namespace TodoList.Server.Controllers
     public class TodosController : ControllerBase
     {
         private readonly ITodoRepository _todoRepository;
+        private readonly IMapper _mapper;
 
-        public TodosController(ITodoRepository todoRepository)
+        public TodosController(ITodoRepository todoRepository, IMapper mapper)
         {
             _todoRepository = todoRepository;
+            _mapper = mapper;
         }
 
         [HttpGet("{id:int}", Name = "GetTodo")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Todo>> GetTodo(int id)
+        public async Task<ActionResult<TodoResponse>> GetTodo(int id)
         {
             var todo = await _todoRepository.GetAsync(id);
 
@@ -28,7 +32,9 @@ namespace TodoList.Server.Controllers
                 return NotFound("Todo not found");
             }
 
-            return Ok(todo);
+            var todoResponse = _mapper.Map<TodoResponse>(todo);
+
+            return Ok(todoResponse);
         }
 
         [HttpGet]

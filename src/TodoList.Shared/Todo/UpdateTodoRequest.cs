@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TodoList.Shared.Todo
 {
-    public class UpdateTodoRequest
+    public class UpdateTodoRequest : CreateTodoRequest
     {
         public int Id { get; set; }
     }

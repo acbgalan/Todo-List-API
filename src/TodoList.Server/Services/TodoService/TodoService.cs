@@ -54,7 +54,7 @@ namespace TodoList.Server.Services.TodoService
 
         public async Task<ServiceResult<TodoResponse>> CreateTodoAsync(CreateTodoRequest createTodoRequest)
         {
-            var serviceResult = new ServiceResult<TodoResponse>();
+            ServiceResult<TodoResponse> serviceResult;
 
             try
             {
@@ -95,9 +95,55 @@ namespace TodoList.Server.Services.TodoService
             return serviceResult;
         }
 
-        public Task<ServiceResult<bool?>> UpdateTodoAsync(UpdateTodoRequest updateTodoRequest)
+        public async Task<ServiceResult<bool?>> UpdateTodoAsync(UpdateTodoRequest updateTodoRequest)
         {
-            throw new NotImplementedException();
+            var serviceResult = new ServiceResult<bool?>();
+
+            try
+            {
+                var todo = await _todoRepository.GetAsync(updateTodoRequest.Id);
+
+                if (todo == null)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Todo not found";
+                    serviceResult.StatusCode = StatusCodes.Status404NotFound;
+
+                    return serviceResult;
+                }
+
+                todo = _mapper.Map(updateTodoRequest, todo);
+                await _todoRepository.UpdateAsync(todo);
+                int saveResult = await _todoRepository.SaveAsync();
+
+                serviceResult.Data = null;
+                serviceResult.Success = saveResult > 0;
+                serviceResult.Message = saveResult > 0 ? "Todo updated successfully" : "Todo not found";
+                serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+
+                return serviceResult;
+
+            }
+            catch (DbUpdateException ex)
+            {
+                serviceResult.Data = null;
+                serviceResult.Success = false;
+                serviceResult.Message = $"Database error: {ex.Message}";
+                serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
+
+                return serviceResult;
+            }
+            catch (Exception ex)
+            {
+
+                serviceResult.Data = null;
+                serviceResult.Success = false;
+                serviceResult.Message = $"Unexpected error: {ex.Message}";
+                serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
+
+                return serviceResult;
+            }
         }
 
         public Task<ServiceResult<bool?>> DeleteTodoAsync(int id)

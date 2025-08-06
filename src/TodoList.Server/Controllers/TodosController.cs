@@ -78,6 +78,7 @@ namespace TodoList.Server.Controllers
 
         [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> UpdateTodo(int id, UpdateTodoRequest updateTodoRequest)
@@ -92,20 +93,11 @@ namespace TodoList.Server.Controllers
                 return BadRequest("Id mismatch");
             }
 
-            var todo = await _todoRepository.GetAsync(id);
+            var serviceResponse = await _todoService.UpdateTodoAsync(updateTodoRequest);
 
-            if (todo == null)
+            if (!serviceResponse.Success)
             {
-                return NotFound("Todo not found");
-            }
-
-            todo = _mapper.Map(updateTodoRequest, todo);
-            await _todoRepository.UpdateAsync(todo);
-            int saveResult = await _todoRepository.SaveAsync();
-
-            if (!(saveResult > 0))
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
+                return StatusCode(serviceResponse.StatusCode, serviceResponse.Message);
             }
 
             return NoContent();

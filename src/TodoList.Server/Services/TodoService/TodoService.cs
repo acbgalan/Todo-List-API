@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
@@ -34,14 +36,63 @@ namespace TodoList.Server.Services.TodoService
             return serviceResult;
         }
 
-        public Task<ServiceResult<List<TodoResponse>>> GetTodosAsync()
+        public async Task<ServiceResult<List<TodoResponse>>> GetTodosAsync()
         {
-            throw new NotImplementedException();
+            var todos = await _todoRepository.GetAllAsync();
+            var todosResponse = _mapper.Map<List<TodoResponse>>(todos);
+
+            var serviceResult = new ServiceResult<List<TodoResponse>>()
+            {
+                Data = todosResponse,
+                Success = todosResponse.Any(),
+                Message = todosResponse.Any() ? "Todos retrieved" : "Todos not found",
+                StatusCode = todosResponse.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+            };
+
+            return serviceResult;
         }
 
-        public Task<ServiceResult<TodoResponse>> CreateTodoAsync(CreateTodoRequest createTodoRequest)
+        public async Task<ServiceResult<TodoResponse>> CreateTodoAsync(CreateTodoRequest createTodoRequest)
         {
-            throw new NotImplementedException();
+            var serviceResult = new ServiceResult<TodoResponse>();
+
+            try
+            {
+                var todo = _mapper.Map<Todo>(createTodoRequest);
+                await _todoRepository.AddAsync(todo);
+                int saveResult = await _todoRepository.SaveAsync();
+                var todoResponse = _mapper.Map<TodoResponse>(todo);
+
+                serviceResult = new ServiceResult<TodoResponse>()
+                {
+                    Data = todoResponse,
+                    Success = saveResult > 0,
+                    Message = saveResult > 0 ? "Todo created successfully" : "Unexpected value when saving",
+                    StatusCode = saveResult > 0 ? StatusCodes.Status200OK : StatusCodes.Status500InternalServerError
+                };
+            }
+            catch (DbUpdateException ex)
+            {
+                serviceResult = new ServiceResult<TodoResponse>()
+                {
+                    Data = null,
+                    Success = false,
+                    Message = $"Database error: {ex.Message}",
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
+            }
+            catch (Exception ex)
+            {
+                serviceResult = new ServiceResult<TodoResponse>()
+                {
+                    Data = null,
+                    Success = false,
+                    Message = $"Unexpected error: {ex.Message}",
+                    StatusCode = StatusCodes.Status500InternalServerError
+                };
+            }
+
+            return serviceResult;
         }
 
         public Task<ServiceResult<bool?>> UpdateTodoAsync(UpdateTodoRequest updateTodoRequest)

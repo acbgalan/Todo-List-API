@@ -43,16 +43,14 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<List<TodoResponse>>> GetsTodo()
         {
-            var todoList = await _todoRepository.GetAllAsync();
+            var serviceResponse = await _todoService.GetTodosAsync();
 
-            if (!todoList.Any())
+            if (!serviceResponse.Success)
             {
-                return NotFound("Todos not found");
+                return NotFound(serviceResponse.Message);
             }
 
-            var todoListResponse = _mapper.Map<List<TodoResponse>>(todoList);
-
-            return Ok(todoListResponse);
+            return Ok(serviceResponse.Data);
         }
 
 
@@ -68,19 +66,14 @@ namespace TodoList.Server.Controllers
                 return BadRequest();
             }
 
-            var todo = _mapper.Map<Todo>(createTodoRequest);
+            var serviceResponse = await _todoService.CreateTodoAsync(createTodoRequest);
 
-            await _todoRepository.AddAsync(todo);
-            int saveResult = await _todoRepository.SaveAsync();
-
-            if (!(saveResult > 0))
+            if (!serviceResponse.Success)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
+                return StatusCode(serviceResponse.StatusCode, serviceResponse.Message);
             }
 
-            var todoResponse = _mapper.Map<TodoResponse>(todo);
-
-            return CreatedAtRoute("GetTodo", new { id = todo.Id }, todoResponse);
+            return CreatedAtRoute("GetTodo", new { id = serviceResponse.Data!.Id }, serviceResponse.Data);
         }
 
         [HttpPut("{id:int}")]

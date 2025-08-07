@@ -109,17 +109,11 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> DeleteTodo(int id)
         {
-            if (!await _todoRepository.ExistsAsync(id))
-            {
-                return NotFound("Todo not found");
-            }
+            var serviceResponse = await _todoService.DeleteTodoAsync(id);
 
-            await _todoRepository.DeleteAsync(id);
-            int saveResult = await _todoRepository.SaveAsync();
-
-            if (!(saveResult > 0))
+            if (!serviceResponse.Success)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected value when saving");
+                return StatusCode(serviceResponse.StatusCode, serviceResponse.Message);
             }
 
             return NoContent();

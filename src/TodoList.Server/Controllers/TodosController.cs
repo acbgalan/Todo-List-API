@@ -41,9 +41,9 @@ namespace TodoList.Server.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<List<TodoResponse>>> GetsTodo()
+        public async Task<ActionResult<List<TodoResponse>>> GetsTodo([FromQuery] QueryParametersTodo queryParametersTodo)
         {
-            var serviceResponse = await _todoService.GetTodosAsync();
+            var serviceResponse = await _todoService.GetTodosAsync(queryParametersTodo);
 
             if (!serviceResponse.Success)
             {

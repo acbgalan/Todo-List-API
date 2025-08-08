@@ -14,6 +14,9 @@ namespace TodoList.Server.Services.TodoService
         private readonly ITodoRepository _todoRepository;
         private readonly IMapper _mapper;
 
+        private static readonly HashSet<string> validSortFields = new HashSet<string> { "id", "title", "description", "createdat", "updatedat" };
+
+
         public TodoService(ITodoRepository todoRepository, IMapper mapper)
         {
             _todoRepository = todoRepository;
@@ -36,10 +39,32 @@ namespace TodoList.Server.Services.TodoService
             return serviceResult;
         }
 
-        public async Task<ServiceResult<List<TodoResponse>>> GetTodosAsync()
+        public async Task<ServiceResult<List<TodoResponse>>> GetTodosAsync(QueryParametersTodo queryParameters)
         {
-            var todos = await _todoRepository.GetAllAsync();
-            var todosResponse = _mapper.Map<List<TodoResponse>>(todos);
+            //SortBy validation
+            if (!string.IsNullOrWhiteSpace(queryParameters.SortBy) && !validSortFields.Contains(queryParameters.SortBy))
+            {
+                return new ServiceResult<List<TodoResponse>>
+                {                    
+                    Success = false,
+                    Message = "Bad parameter",
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            //Page and limit validation
+            if (queryParameters.Page < 1 || queryParameters.Limit < 1)
+            {
+                return new ServiceResult<List<TodoResponse>>
+                {
+                    Success = false,
+                    Message = "Bad parameter",
+                    StatusCode = StatusCodes.Status400BadRequest
+                };
+            }
+
+            var filteredTodos = await _todoRepository.GetFilteredTodosAsync(queryParameters);
+            var todosResponse = _mapper.Map<List<TodoResponse>>(filteredTodos);
 
             var serviceResult = new ServiceResult<List<TodoResponse>>()
             {

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
 using TodoList.Server.Services.TodoService;
+using TodoList.Shared;
 using TodoList.Shared.Todo;
 
 namespace TodoList.Server.Controllers
@@ -41,9 +42,9 @@ namespace TodoList.Server.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<List<TodoResponse>>> GetsTodo()
+        public async Task<ActionResult<PagedResponse<TodoResponse>>> GetsTodo([FromQuery] QueryParameters queryParametersTodo)
         {
-            var serviceResponse = await _todoService.GetTodosAsync();
+            var serviceResponse = await _todoService.GetTodosAsync(queryParametersTodo);
 
             if (!serviceResponse.Success)
             {

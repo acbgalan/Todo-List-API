@@ -15,4 +15,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\TodoList.Shared\TodoList.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

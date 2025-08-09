@@ -6,8 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using TodoList.Data.Contexts;
 using TodoList.Data.Entities;
-using TodoList.Shared.Todo;
 using System.Reflection;
+using TodoList.Shared;
 
 namespace TodoList.Data.Repositories
 {
@@ -35,7 +35,7 @@ namespace TodoList.Data.Repositories
             return await _context.Todos.ToListAsync();
         }
 
-        public async Task<List<Todo>> GetFilteredTodosAsync(QueryParametersTodo queryParameters)
+        public async Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters)
         {
             IQueryable<Todo> filteredTodos = _context.Todos;
 
@@ -44,6 +44,8 @@ namespace TodoList.Data.Repositories
             {
                 filteredTodos = filteredTodos.Where(x => x.Title.ToLower().Contains(queryParameters.SearchTerm!.ToLower()));
             }
+
+            int totalCount = await filteredTodos.CountAsync();
 
             //SortBy. Sorting
             if (!string.IsNullOrWhiteSpace(queryParameters.SortBy))
@@ -76,7 +78,7 @@ namespace TodoList.Data.Repositories
             int skip = (queryParameters.Page - 1) * queryParameters.Limit;
             filteredTodos = filteredTodos.Skip(skip).Take(queryParameters.Limit);
 
-            return await filteredTodos.ToListAsync();
+            return (await filteredTodos.ToListAsync(), totalCount);
         }
 
 

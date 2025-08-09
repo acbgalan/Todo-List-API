@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TodoList.Data.Entities;
-using TodoList.Shared.Todo;
+using TodoList.Shared;
 
 namespace TodoList.Data.Repositories
 {
     public interface ITodoRepository : IRepositoryAsync<Todo>
     {
-        Task<List<Todo>> GetFilteredTodosAsync(QueryParametersTodo queryParameters);
+        Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters);
     }
 }

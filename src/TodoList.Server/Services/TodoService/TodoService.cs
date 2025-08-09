@@ -39,13 +39,14 @@ namespace TodoList.Server.Services.TodoService
             return serviceResult;
         }
 
-        public async Task<ServiceResult<List<TodoResponse>>> GetTodosAsync(QueryParametersTodo queryParameters)
+        public async Task<ServiceResult<PagedResponse<TodoResponse>>> GetTodosAsync(QueryParameters queryParameters)
         {
             //SortBy validation
             if (!string.IsNullOrWhiteSpace(queryParameters.SortBy) && !validSortFields.Contains(queryParameters.SortBy))
             {
-                return new ServiceResult<List<TodoResponse>>
-                {                    
+                return new ServiceResult<PagedResponse<TodoResponse>>
+                {
+                    Data = null,
                     Success = false,
                     Message = "Bad parameter",
                     StatusCode = StatusCodes.Status400BadRequest
@@ -55,23 +56,31 @@ namespace TodoList.Server.Services.TodoService
             //Page and limit validation
             if (queryParameters.Page < 1 || queryParameters.Limit < 1)
             {
-                return new ServiceResult<List<TodoResponse>>
+                return new ServiceResult<PagedResponse<TodoResponse>>
                 {
+                    Data = null,
                     Success = false,
                     Message = "Bad parameter",
                     StatusCode = StatusCodes.Status400BadRequest
                 };
             }
 
-            var filteredTodos = await _todoRepository.GetFilteredTodosAsync(queryParameters);
-            var todosResponse = _mapper.Map<List<TodoResponse>>(filteredTodos);
+            var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters);
 
-            var serviceResult = new ServiceResult<List<TodoResponse>>()
+            var pagedResponse = new PagedResponse<TodoResponse>
             {
-                Data = todosResponse,
-                Success = todosResponse.Any(),
-                Message = todosResponse.Any() ? "Todos retrieved" : "Todos not found",
-                StatusCode = todosResponse.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+                Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
+                Page = queryParameters.Page,
+                Limit = queryParameters.Limit,
+                Total = totalCount
+            };
+
+            var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+            {
+                Data = pagedResponse,
+                Success = pagedResponse.Data.Any(),
+                Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
+                StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
             };
 
             return serviceResult;
@@ -208,6 +217,5 @@ namespace TodoList.Server.Services.TodoService
 
             return serviceResult;
         }
-
     }
 }

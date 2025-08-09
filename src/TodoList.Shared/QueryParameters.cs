@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TodoList.Shared.Todo
+namespace TodoList.Shared
 {
-    public class QueryParametersTodo
+    public class QueryParameters
     {
         public string? SearchTerm { get; set; }
         public string? SortBy { get; set; }

@@ -13,13 +13,11 @@ namespace TodoList.Server.Controllers
     [ApiController]
     public class TodosController : ControllerBase
     {
-        private readonly ITodoRepository _todoRepository;
         private readonly IMapper _mapper;
         private readonly ITodoService _todoService;
 
-        public TodosController(ITodoRepository todoRepository, IMapper mapper, ITodoService todoService)
+        public TodosController(IMapper mapper, ITodoService todoService)
         {
-            _todoRepository = todoRepository;
             _mapper = mapper;
             _todoService = todoService;
         }
@@ -62,7 +60,7 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> CreateTodo(CreateTodoRequest createTodoRequest)
         {
-            if (createTodoRequest == null)
+       if (createTodoRequest == null)
             {
                 return BadRequest();
             }

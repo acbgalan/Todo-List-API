@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TodoList.Data.Entities;
@@ -11,6 +12,7 @@ namespace TodoList.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class TodosController : ControllerBase
     {
         private readonly IMapper _mapper;
@@ -60,7 +62,7 @@ namespace TodoList.Server.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult> CreateTodo(CreateTodoRequest createTodoRequest)
         {
-       if (createTodoRequest == null)
+            if (createTodoRequest == null)
             {
                 return BadRequest();
             }

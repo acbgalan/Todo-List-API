@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace TodoList.Shared.User
 {
-    public class UserLoginResponse : AuthenticationResponse
+    public abstract class AuthenticationResponse
     {
+        public string Token { get; set; } = string.Empty;
+        public DateTime Expiration { get; set; }
     }
 }

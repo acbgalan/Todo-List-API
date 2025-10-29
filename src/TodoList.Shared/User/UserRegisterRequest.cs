@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TodoList.Shared.User
 {
-    public class UserLoginResponse : AuthenticationResponse
+    public class UserRegisterRequest : CredentialsRequest
     {
     }
 }

@@ -7,7 +7,13 @@ using System.Threading.Tasks;
 
 namespace TodoList.Shared.User
 {
-    public class UserLoginRequest : CredentialsRequest
+    public abstract class CredentialsRequest
     {
+        [Required]
+        [EmailAddress]
+        public required string Email { get; set; }
+
+        [Required]
+        public string? Password { get; set; }
     }
 }

@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,7 +20,12 @@ namespace TodoList.Data.Entities
         [StringLength(500, ErrorMessage = "The field cannot exceed {1} characters")]
         public string Description { get; set; } = string.Empty;
 
+        [ForeignKey(nameof(User))]
+        public required string UserId { get; set; }
+
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
+
+        public IdentityUser? User { get; set; }
     }
 }

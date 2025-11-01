@@ -12,7 +12,8 @@ namespace TodoList.Server.Mapper
         }
         public void TodoMapping()
         {
-            CreateMap<Todo, TodoResponse>();
+            CreateMap<Todo, TodoResponse>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.User!.Email));
             CreateMap<CreateTodoRequest, Todo>();
             CreateMap<UpdateTodoRequest, Todo>();
         }

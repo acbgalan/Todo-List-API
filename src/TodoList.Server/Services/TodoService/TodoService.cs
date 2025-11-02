@@ -96,7 +96,7 @@ namespace TodoList.Server.Services.TodoService
             {
                 var user = await _userService.GetUser();
 
-                if(user == null)
+                if (user == null)
                 {
                     serviceResult = new ServiceResult<TodoResponse>()
                     {
@@ -153,6 +153,18 @@ namespace TodoList.Server.Services.TodoService
 
             try
             {
+                var user = await _userService.GetUser();
+
+                if (user == null)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Unable to retrieve authenticated user from context";
+                    serviceResult.StatusCode = StatusCodes.Status401Unauthorized;
+
+                    return serviceResult;
+                }
+
                 var todo = await _todoRepository.GetAsync(updateTodoRequest.Id);
 
                 if (todo == null)
@@ -161,18 +173,28 @@ namespace TodoList.Server.Services.TodoService
                     serviceResult.Success = false;
                     serviceResult.Message = "Todo not found";
                     serviceResult.StatusCode = StatusCodes.Status404NotFound;
-                }
-                else
-                {
-                    todo = _mapper.Map(updateTodoRequest, todo);
-                    await _todoRepository.UpdateAsync(todo);
-                    int saveResult = await _todoRepository.SaveAsync();
 
-                    serviceResult.Data = null;
-                    serviceResult.Success = saveResult > 0;
-                    serviceResult.Message = saveResult > 0 ? "Todo updated successfully" : "Unexpected value when saving";
-                    serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+                    return serviceResult;
                 }
+
+                if (user.Id != todo.UserId)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Access to this Todo is forbidden";
+                    serviceResult.StatusCode = StatusCodes.Status403Forbidden;
+
+                    return serviceResult;
+                }
+
+                todo = _mapper.Map(updateTodoRequest, todo);
+                await _todoRepository.UpdateAsync(todo);
+                int saveResult = await _todoRepository.SaveAsync();
+
+                serviceResult.Data = null;
+                serviceResult.Success = saveResult > 0;
+                serviceResult.Message = saveResult > 0 ? "Todo updated successfully" : "Unexpected value when saving";
+                serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
             }
             catch (DbUpdateException ex)
             {

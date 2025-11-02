@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
+using TodoList.Server.Services.UserService;
 using TodoList.Shared;
 using TodoList.Shared.Todo;
 
@@ -13,14 +14,15 @@ namespace TodoList.Server.Services.TodoService
     {
         private readonly ITodoRepository _todoRepository;
         private readonly IMapper _mapper;
-
+        private readonly IUserService _userService;
         private static readonly HashSet<string> validSortFields = new HashSet<string> { "id", "title", "description", "createdat", "updatedat" };
 
 
-        public TodoService(ITodoRepository todoRepository, IMapper mapper)
+        public TodoService(ITodoRepository todoRepository, IMapper mapper, IUserService userService)
         {
             _todoRepository = todoRepository;
             _mapper = mapper;
+            _userService = userService;
         }
 
         public async Task<ServiceResult<TodoResponse>> GetTodoAsync(int id)
@@ -92,7 +94,23 @@ namespace TodoList.Server.Services.TodoService
 
             try
             {
+                var user = await _userService.GetUser();
+
+                if (user == null)
+                {
+                    serviceResult = new ServiceResult<TodoResponse>()
+                    {
+                        Data = null,
+                        Success = false,
+                        Message = "Unable to retrieve authenticated user from context",
+                        StatusCode = StatusCodes.Status401Unauthorized
+                    };
+
+                    return serviceResult;
+                }
+
                 var todo = _mapper.Map<Todo>(createTodoRequest);
+                todo.UserId = user.Id;
                 await _todoRepository.AddAsync(todo);
                 int saveResult = await _todoRepository.SaveAsync();
                 var todoResponse = _mapper.Map<TodoResponse>(todo);
@@ -135,6 +153,18 @@ namespace TodoList.Server.Services.TodoService
 
             try
             {
+                var user = await _userService.GetUser();
+
+                if (user == null)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Unable to retrieve authenticated user from context";
+                    serviceResult.StatusCode = StatusCodes.Status401Unauthorized;
+
+                    return serviceResult;
+                }
+
                 var todo = await _todoRepository.GetAsync(updateTodoRequest.Id);
 
                 if (todo == null)
@@ -143,18 +173,28 @@ namespace TodoList.Server.Services.TodoService
                     serviceResult.Success = false;
                     serviceResult.Message = "Todo not found";
                     serviceResult.StatusCode = StatusCodes.Status404NotFound;
-                }
-                else
-                {
-                    todo = _mapper.Map(updateTodoRequest, todo);
-                    await _todoRepository.UpdateAsync(todo);
-                    int saveResult = await _todoRepository.SaveAsync();
 
-                    serviceResult.Data = null;
-                    serviceResult.Success = saveResult > 0;
-                    serviceResult.Message = saveResult > 0 ? "Todo updated successfully" : "Unexpected value when saving";
-                    serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+                    return serviceResult;
                 }
+
+                if (user.Id != todo.UserId)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Access to this Todo is forbidden";
+                    serviceResult.StatusCode = StatusCodes.Status403Forbidden;
+
+                    return serviceResult;
+                }
+
+                todo = _mapper.Map(updateTodoRequest, todo);
+                await _todoRepository.UpdateAsync(todo);
+                int saveResult = await _todoRepository.SaveAsync();
+
+                serviceResult.Data = null;
+                serviceResult.Success = saveResult > 0;
+                serviceResult.Message = saveResult > 0 ? "Todo updated successfully" : "Unexpected value when saving";
+                serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
             }
             catch (DbUpdateException ex)
             {

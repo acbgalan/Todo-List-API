@@ -8,6 +8,7 @@ using TodoList.Data.Contexts;
 using TodoList.Data.Repositories;
 using TodoList.Server.Mapper;
 using TodoList.Server.Services.TodoService;
+using TodoList.Server.Services.UserService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,7 @@ builder.Services.AddControllers();
 builder.Services.AddDbContext<ApplicationContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ApplicationContext")));
 builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 builder.Services.AddScoped<ITodoService, TodoService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddAutoMapper(cfg => { cfg.LicenseKey = builder.Configuration["AutoMapper:LicenseKey"]; }, typeof(AutoMapperProfiles));
 
 builder.Services.AddIdentityCore<IdentityUser>()

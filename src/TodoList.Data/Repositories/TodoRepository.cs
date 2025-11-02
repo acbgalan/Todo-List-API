@@ -27,17 +27,17 @@ namespace TodoList.Data.Repositories
 
         public async Task<Todo?> GetAsync(int id)
         {
-            return await _context.Todos.FindAsync(id);
+            return await _context.Todos.Include(x => x.User).FirstOrDefaultAsync();
         }
 
         public async Task<List<Todo>> GetAllAsync()
         {
-            return await _context.Todos.ToListAsync();
+            return await _context.Todos.Include(x => x.User).ToListAsync();
         }
 
         public async Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters)
         {
-            IQueryable<Todo> filteredTodos = _context.Todos;
+            IQueryable<Todo> filteredTodos = _context.Todos.Include(x => x.User);
 
             //SearchTerm. Filtering by search term
             if (!string.IsNullOrWhiteSpace(queryParameters.SearchTerm))

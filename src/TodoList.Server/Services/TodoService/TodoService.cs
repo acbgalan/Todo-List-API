@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TodoList.Data.Entities;
 using TodoList.Data.Repositories;
+using TodoList.Server.Services.UserService;
 using TodoList.Shared;
 using TodoList.Shared.Todo;
 
@@ -13,14 +14,15 @@ namespace TodoList.Server.Services.TodoService
     {
         private readonly ITodoRepository _todoRepository;
         private readonly IMapper _mapper;
-
+        private readonly IUserService _userService;
         private static readonly HashSet<string> validSortFields = new HashSet<string> { "id", "title", "description", "createdat", "updatedat" };
 
 
-        public TodoService(ITodoRepository todoRepository, IMapper mapper)
+        public TodoService(ITodoRepository todoRepository, IMapper mapper, IUserService userService)
         {
             _todoRepository = todoRepository;
             _mapper = mapper;
+            _userService = userService;
         }
 
         public async Task<ServiceResult<TodoResponse>> GetTodoAsync(int id)
@@ -92,7 +94,23 @@ namespace TodoList.Server.Services.TodoService
 
             try
             {
+                var user = await _userService.GetUser();
+
+                if(user == null)
+                {
+                    serviceResult = new ServiceResult<TodoResponse>()
+                    {
+                        Data = null,
+                        Success = false,
+                        Message = "Unable to retrieve authenticated user from context",
+                        StatusCode = StatusCodes.Status401Unauthorized
+                    };
+
+                    return serviceResult;
+                }
+
                 var todo = _mapper.Map<Todo>(createTodoRequest);
+                todo.UserId = user.Id;
                 await _todoRepository.AddAsync(todo);
                 int saveResult = await _todoRepository.SaveAsync();
                 var todoResponse = _mapper.Map<TodoResponse>(todo);

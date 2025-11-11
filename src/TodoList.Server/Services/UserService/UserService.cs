@@ -1,19 +1,20 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using TodoList.Data.Entities;
 
 namespace TodoList.Server.Services.UserService
 {
     public class UserService : IUserService
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<User> _userManager;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserService(UserManager<IdentityUser> userManager, IHttpContextAccessor httpContextAccessor)
+        public UserService(UserManager<User> userManager, IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<IdentityUser?> GetUser()
+        public async Task<User?> GetUser()
         {
             var emailClaim = _httpContextAccessor.HttpContext!.User.Claims.Where(x => x.Type == "email").FirstOrDefault();
 

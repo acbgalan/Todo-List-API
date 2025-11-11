@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TodoList.Data.Entities;
 using TodoList.Server.Services.UserService;
 using TodoList.Shared.User;
 
@@ -17,12 +18,12 @@ namespace TodoList.Server.Controllers
     [Authorize]
     public class UsersController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IUserService _userService;
 
-        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IUserService userService)
+        public UsersController(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, IUserService userService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -34,10 +35,11 @@ namespace TodoList.Server.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<UserRegisterResponse>> Register(UserRegisterRequest userRegister)
         {
-            var user = new IdentityUser()
+            var user = new User()
             {
                 UserName = userRegister.Email,
-                Email = userRegister.Email
+                Email = userRegister.Email,
+                Name = userRegister.Name
             };
 
             var result = await _userManager.CreateAsync(user, userRegister.Password!);
@@ -85,7 +87,7 @@ namespace TodoList.Server.Controllers
         [HttpPost("Refresh")]
         public async Task<ActionResult<UserLoginResponse>> RefreshToken()
         {
-            IdentityUser? user = await _userService.GetUser();
+            User? user = await _userService.GetUser();
 
             if (user == null)
             {

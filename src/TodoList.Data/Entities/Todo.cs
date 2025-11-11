@@ -26,6 +26,6 @@ namespace TodoList.Data.Entities
         public DateTime? CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
-        public IdentityUser? User { get; set; }
+        public User? User { get; set; }
     }
 }

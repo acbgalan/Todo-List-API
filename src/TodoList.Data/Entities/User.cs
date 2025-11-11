@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TodoList.Shared.User
+namespace TodoList.Data.Entities
 {
-    public class UserRegisterRequest : CredentialsRequest
+    public class User : IdentityUser
     {
         [Required]
         public required string Name { get; set; }

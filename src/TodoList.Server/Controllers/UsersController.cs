@@ -109,8 +109,55 @@ namespace TodoList.Server.Controllers
         {
             List<User> users = await _userManager.Users.ToListAsync();
             List<UserResponse> usersList = _mapper.Map<List<UserResponse>>(users);
-
             return usersList;
+        }
+
+        [HttpPost("Set-Admin")]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult> SetAdmin(UserSetClaim userEmail)
+        {
+            var user = await _userManager.FindByEmailAsync(userEmail.Email);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _userManager.AddClaimAsync(user, new Claim("Administrator", "true"));
+
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Error granting permission");
+                return ValidationProblem();
+            }
+        }
+
+        [HttpPost("Remove-Admin")]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult> RemoveAdmin(UserSetClaim userEmail)
+        {
+            var user = await _userManager.FindByEmailAsync(userEmail.Email);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _userManager.RemoveClaimAsync(user, new Claim("Administrator", "true"));
+
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Error removing permission");
+                return ValidationProblem();
+            }
         }
 
         private async Task<ActionResult<TResponse>> BuildToken<TRequest, TResponse>(TRequest request)

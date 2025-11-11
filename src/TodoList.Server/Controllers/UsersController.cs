@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TodoList.Server.Services.UserService;
 using TodoList.Shared.User;
 
 namespace TodoList.Server.Controllers
@@ -19,12 +20,14 @@ namespace TodoList.Server.Controllers
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly IUserService _userService;
 
-        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration, IUserService userService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _userService = userService;
         }
 
         [HttpPost("Register")]
@@ -79,14 +82,29 @@ namespace TodoList.Server.Controllers
             }
         }
 
+        [HttpPost("Refresh")]
+        public async Task<ActionResult<UserLoginResponse>> RefreshToken()
+        {
+            IdentityUser? user = await _userService.GetUser();
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var refreshRequest = new UserLoginRequest() { Email = user.Email! };
+            var refreshResponse = await BuildToken<UserLoginRequest, UserLoginResponse>(refreshRequest);
+            return refreshResponse;
+        }
+
+
         private async Task<ActionResult<TResponse>> BuildToken<TRequest, TResponse>(TRequest request)
             where TRequest : CredentialsRequest
             where TResponse : AuthenticationResponse, new()
         {
             var claims = new List<Claim>
             {
-                new Claim("email", request.Email),
-                new Claim("test", "test value claim")
+                new Claim("email", request.Email)
             };
 
             var user = await _userManager.FindByEmailAsync(request.Email);

@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -22,13 +24,15 @@ namespace TodoList.Server.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _configuration;
         private readonly IUserService _userService;
+        private readonly IMapper _mapper;
 
-        public UsersController(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, IUserService userService)
+        public UsersController(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, IUserService userService, IMapper mapper)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
             _userService = userService;
+            _mapper = mapper;
         }
 
         [HttpPost("Register")]
@@ -99,6 +103,15 @@ namespace TodoList.Server.Controllers
             return refreshResponse;
         }
 
+        [HttpGet]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult<List<UserResponse>>> UsersList()
+        {
+            List<User> users = await _userManager.Users.ToListAsync();
+            List<UserResponse> usersList = _mapper.Map<List<UserResponse>>(users);
+
+            return usersList;
+        }
 
         private async Task<ActionResult<TResponse>> BuildToken<TRequest, TResponse>(TRequest request)
             where TRequest : CredentialsRequest

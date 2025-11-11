@@ -9,7 +9,7 @@ using TodoList.Data.Entities;
 
 namespace TodoList.Data.Contexts
 {
-    public class ApplicationContext : IdentityDbContext
+    public class ApplicationContext : IdentityDbContext<User>
     {
         public ApplicationContext(DbContextOptions<ApplicationContext> options) : base(options)
         {

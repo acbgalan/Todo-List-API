@@ -27,7 +27,7 @@ namespace TodoList.Data.Repositories
 
         public async Task<Todo?> GetAsync(int id)
         {
-            return await _context.Todos.Include(x => x.User).FirstOrDefaultAsync();
+            return await _context.Todos.Include(x => x.User).FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<List<Todo>> GetAllAsync()

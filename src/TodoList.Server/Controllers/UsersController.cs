@@ -1,12 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using TodoList.Data.Entities;
+using TodoList.Server.Services.UserService;
 using TodoList.Shared.User;
 
 namespace TodoList.Server.Controllers
@@ -16,25 +20,30 @@ namespace TodoList.Server.Controllers
     [Authorize]
     public class UsersController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<User> _userManager;
+        private readonly SignInManager<User> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly IUserService _userService;
+        private readonly IMapper _mapper;
 
-        public UsersController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+        public UsersController(UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration configuration, IUserService userService, IMapper mapper)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _configuration = configuration;
+            _userService = userService;
+            _mapper = mapper;
         }
 
         [HttpPost("Register")]
         [AllowAnonymous]
         public async Task<ActionResult<UserRegisterResponse>> Register(UserRegisterRequest userRegister)
         {
-            var user = new IdentityUser()
+            var user = new User()
             {
                 UserName = userRegister.Email,
-                Email = userRegister.Email
+                Email = userRegister.Email,
+                Name = userRegister.Name
             };
 
             var result = await _userManager.CreateAsync(user, userRegister.Password!);
@@ -79,14 +88,85 @@ namespace TodoList.Server.Controllers
             }
         }
 
+        [HttpPost("Refresh")]
+        public async Task<ActionResult<UserLoginResponse>> RefreshToken()
+        {
+            User? user = await _userService.GetUser();
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var refreshRequest = new UserLoginRequest() { Email = user.Email! };
+            var refreshResponse = await BuildToken<UserLoginRequest, UserLoginResponse>(refreshRequest);
+            return refreshResponse;
+        }
+
+        [HttpGet]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult<List<UserResponse>>> UsersList()
+        {
+            List<User> users = await _userManager.Users.ToListAsync();
+            List<UserResponse> usersList = _mapper.Map<List<UserResponse>>(users);
+            return usersList;
+        }
+
+        [HttpPost("Set-Admin")]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult> SetAdmin(UserSetClaim userEmail)
+        {
+            var user = await _userManager.FindByEmailAsync(userEmail.Email);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _userManager.AddClaimAsync(user, new Claim("Administrator", "true"));
+
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Error granting permission");
+                return ValidationProblem();
+            }
+        }
+
+        [HttpPost("Remove-Admin")]
+        [Authorize(Policy = "Administrator")]
+        public async Task<ActionResult> RemoveAdmin(UserSetClaim userEmail)
+        {
+            var user = await _userManager.FindByEmailAsync(userEmail.Email);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            var result = await _userManager.RemoveClaimAsync(user, new Claim("Administrator", "true"));
+
+            if (result.Succeeded)
+            {
+                return NoContent();
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Error removing permission");
+                return ValidationProblem();
+            }
+        }
+
         private async Task<ActionResult<TResponse>> BuildToken<TRequest, TResponse>(TRequest request)
             where TRequest : CredentialsRequest
             where TResponse : AuthenticationResponse, new()
         {
             var claims = new List<Claim>
             {
-                new Claim("email", request.Email),
-                new Claim("test", "test value claim")
+                new Claim("email", request.Email)
             };
 
             var user = await _userManager.FindByEmailAsync(request.Email);

@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using TodoList.Data.Entities;
 using TodoList.Shared.Todo;
+using TodoList.Shared.User;
 
 namespace TodoList.Server.Mapper
 {
@@ -9,7 +10,9 @@ namespace TodoList.Server.Mapper
         public AutoMapperProfiles()
         {
             TodoMapping();
+            UsersMapping();
         }
+
         public void TodoMapping()
         {
             CreateMap<Todo, TodoResponse>()
@@ -17,5 +20,11 @@ namespace TodoList.Server.Mapper
             CreateMap<CreateTodoRequest, Todo>();
             CreateMap<UpdateTodoRequest, Todo>();
         }
+
+        private void UsersMapping()
+        {
+            CreateMap<User, UserResponse>();
+        }
+
     }
 }

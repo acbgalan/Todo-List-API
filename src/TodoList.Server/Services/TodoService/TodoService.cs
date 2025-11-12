@@ -188,11 +188,10 @@ namespace TodoList.Server.Services.TodoService
         public async Task<ServiceResult<bool?>> UpdateTodoAsync(UpdateTodoRequest updateTodoRequest)
         {
             var serviceResult = new ServiceResult<bool?>();
+            var user = await _userService.GetUser();
 
             try
             {
-                var user = await _userService.GetUser();
-
                 if (user == null)
                 {
                     serviceResult.Data = null;
@@ -215,7 +214,8 @@ namespace TodoList.Server.Services.TodoService
                     return serviceResult;
                 }
 
-                if (user.Id != todo.UserId)
+                //Administrator can update any record
+                if (!_userService.IsAdministrator() && user.Id != todo.UserId)
                 {
                     serviceResult.Data = null;
                     serviceResult.Success = false;

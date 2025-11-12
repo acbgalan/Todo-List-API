@@ -256,26 +256,52 @@ namespace TodoList.Server.Services.TodoService
         public async Task<ServiceResult<bool?>> DeleteTodoAsync(int id)
         {
             ServiceResult<bool?> serviceResult = new ServiceResult<bool?>();
+            User? user = await _userService.GetUser();
 
             try
             {
+                if (user == null)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Unable to retrieve authenticated user from context";
+                    serviceResult.StatusCode = StatusCodes.Status401Unauthorized;
+
+                    return serviceResult;
+                }
+
                 if (!await _todoRepository.ExistsAsync(id))
                 {
                     serviceResult.Data = null;
                     serviceResult.Success = false;
                     serviceResult.Message = "Todo not found";
                     serviceResult.StatusCode = StatusCodes.Status404NotFound;
-                }
-                else
-                {
-                    await _todoRepository.DeleteAsync(id);
-                    int saveResult = await _todoRepository.SaveAsync();
 
-                    serviceResult.Data = null;
-                    serviceResult.Success = saveResult > 0;
-                    serviceResult.Message = saveResult > 0 ? "Todo removed successfully" : "Unexpected value when saving";
-                    serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+                    return serviceResult;
                 }
+
+                var todo = await _todoRepository.GetAsync(id);
+
+                //Administrator can update any record
+                if (!_userService.IsAdministrator() && todo!.UserId != user.Id)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Access to this Todo is forbidden";
+                    serviceResult.StatusCode = StatusCodes.Status403Forbidden;
+
+                    return serviceResult;
+                }
+
+                await _todoRepository.DeleteAsync(id);
+                int saveResult = await _todoRepository.SaveAsync();
+
+                serviceResult.Data = null;
+                serviceResult.Success = saveResult > 0;
+                serviceResult.Message = saveResult > 0 ? "Todo removed successfully" : "Unexpected value when saving";
+                serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+
+                return serviceResult;
             }
             catch (DbUpdateException ex)
             {
@@ -284,6 +310,8 @@ namespace TodoList.Server.Services.TodoService
                 serviceResult.Message = $"Database error: {ex.Message}";
                 serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
 
+                return serviceResult;
+
             }
             catch (Exception ex)
             {
@@ -291,9 +319,9 @@ namespace TodoList.Server.Services.TodoService
                 serviceResult.Success = false;
                 serviceResult.Message = $"Unexpected error: {ex.Message}";
                 serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
-            }
 
-            return serviceResult;
+                return serviceResult;
+            }
         }
     }
 }

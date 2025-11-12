@@ -40,9 +40,15 @@ namespace TodoList.Data.Repositories
             return await _context.Todos.Include(x => x.User).ToListAsync();
         }
 
-        public async Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters)
+        public async Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters, string? userEmail = null)
         {
             IQueryable<Todo> filteredTodos = _context.Todos.Include(x => x.User);
+
+            //User email filtering
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                filteredTodos = filteredTodos.Where(x => x.User!.NormalizedEmail == userEmail.ToUpper());
+            }
 
             //SearchTerm. Filtering by search term
             if (!string.IsNullOrWhiteSpace(queryParameters.SearchTerm))

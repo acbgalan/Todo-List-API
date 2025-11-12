@@ -78,25 +78,52 @@ namespace TodoList.Server.Services.TodoService
                 };
             }
 
-            var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters);
 
-            var pagedResponse = new PagedResponse<TodoResponse>
+            if (_userService.IsAdministrator())
             {
-                Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
-                Page = queryParameters.Page,
-                Limit = queryParameters.Limit,
-                Total = totalCount
-            };
+                var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters);
 
-            var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                var pagedResponse = new PagedResponse<TodoResponse>
+                {
+                    Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
+                    Page = queryParameters.Page,
+                    Limit = queryParameters.Limit,
+                    Total = totalCount
+                };
+
+                var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                {
+                    Data = pagedResponse,
+                    Success = pagedResponse.Data.Any(),
+                    Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
+                    StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+                };
+
+                return serviceResult;
+            }
+            else
             {
-                Data = pagedResponse,
-                Success = pagedResponse.Data.Any(),
-                Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
-                StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
-            };
+                var user = await _userService.GetUser();
+                var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters, user!.NormalizedEmail);
 
-            return serviceResult;
+                var pagedResponse = new PagedResponse<TodoResponse>
+                {
+                    Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
+                    Page = queryParameters.Page,
+                    Limit = queryParameters.Limit,
+                    Total = totalCount
+                };
+
+                var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                {
+                    Data = pagedResponse,
+                    Success = pagedResponse.Data.Any(),
+                    Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
+                    StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+                };
+
+                return serviceResult;
+            }
         }
 
         public async Task<ServiceResult<TodoResponse>> CreateTodoAsync(CreateTodoRequest createTodoRequest)

@@ -30,6 +30,11 @@ namespace TodoList.Data.Repositories
             return await _context.Todos.Include(x => x.User).FirstOrDefaultAsync(x => x.Id == id);
         }
 
+        public async Task<Todo?> GetAsync(int id, string userEmail)
+        {
+            return await _context.Todos.Include(x => x.User).FirstOrDefaultAsync(x => x.Id == id && x.User!.NormalizedEmail == userEmail.ToUpper());
+        }
+
         public async Task<List<Todo>> GetAllAsync()
         {
             return await _context.Todos.Include(x => x.User).ToListAsync();
@@ -118,6 +123,5 @@ namespace TodoList.Data.Repositories
         {
             return await _context.SaveChangesAsync();
         }
-
     }
 }

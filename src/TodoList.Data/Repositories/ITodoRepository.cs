@@ -11,5 +11,6 @@ namespace TodoList.Data.Repositories
     public interface ITodoRepository : IRepositoryAsync<Todo>
     {
         Task<(List<Todo> filteredTodos, int totalCount)> GetFilteredTodosAsync(QueryParameters queryParameters);
+        Task<Todo?> GetAsync(int id, string userEmail);
     }
 }

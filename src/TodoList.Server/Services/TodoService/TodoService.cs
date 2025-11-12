@@ -27,9 +27,20 @@ namespace TodoList.Server.Services.TodoService
 
         public async Task<ServiceResult<TodoResponse>> GetTodoAsync(int id)
         {
-            var todo = await _todoRepository.GetAsync(id);
-            var todoResponse = _mapper.Map<TodoResponse>(todo);
+            bool isAdministrator = _userService.IsAdministrator();
+            Todo? todo = null;
 
+            if (isAdministrator)
+            {
+                todo = await _todoRepository.GetAsync(id);
+            }
+            else
+            {
+                var user = await _userService.GetUser();
+                todo = await _todoRepository.GetAsync(id, user!.NormalizedEmail!);
+            }
+
+            var todoResponse = _mapper.Map<TodoResponse>(todo);
             var serviceResult = new ServiceResult<TodoResponse>()
             {
                 Data = todoResponse,

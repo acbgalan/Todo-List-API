@@ -6,5 +6,6 @@ namespace TodoList.Server.Services.UserService
     public interface IUserService
     {
         Task<User?> GetUser();
+        bool IsAdministrator();
     }
 }

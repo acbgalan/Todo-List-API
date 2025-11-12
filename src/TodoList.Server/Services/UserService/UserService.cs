@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
 using TodoList.Data.Entities;
 
 namespace TodoList.Server.Services.UserService
@@ -24,6 +25,12 @@ namespace TodoList.Server.Services.UserService
             }
 
             return await _userManager.FindByEmailAsync(emailClaim.Value);
+        }
+
+        public bool IsAdministrator()
+        {
+            var administratorClaim = _httpContextAccessor.HttpContext!.User.Claims.FirstOrDefault(x => x.Type == "Administrator");
+            return administratorClaim != null ? true : false;
         }
     }
 }

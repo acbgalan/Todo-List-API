@@ -27,9 +27,20 @@ namespace TodoList.Server.Services.TodoService
 
         public async Task<ServiceResult<TodoResponse>> GetTodoAsync(int id)
         {
-            var todo = await _todoRepository.GetAsync(id);
-            var todoResponse = _mapper.Map<TodoResponse>(todo);
+            bool isAdministrator = _userService.IsAdministrator();
+            Todo? todo = null;
 
+            if (isAdministrator)
+            {
+                todo = await _todoRepository.GetAsync(id);
+            }
+            else
+            {
+                var user = await _userService.GetUser();
+                todo = await _todoRepository.GetAsync(id, user!.NormalizedEmail!);
+            }
+
+            var todoResponse = _mapper.Map<TodoResponse>(todo);
             var serviceResult = new ServiceResult<TodoResponse>()
             {
                 Data = todoResponse,
@@ -67,25 +78,52 @@ namespace TodoList.Server.Services.TodoService
                 };
             }
 
-            var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters);
 
-            var pagedResponse = new PagedResponse<TodoResponse>
+            if (_userService.IsAdministrator())
             {
-                Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
-                Page = queryParameters.Page,
-                Limit = queryParameters.Limit,
-                Total = totalCount
-            };
+                var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters);
 
-            var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                var pagedResponse = new PagedResponse<TodoResponse>
+                {
+                    Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
+                    Page = queryParameters.Page,
+                    Limit = queryParameters.Limit,
+                    Total = totalCount
+                };
+
+                var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                {
+                    Data = pagedResponse,
+                    Success = pagedResponse.Data.Any(),
+                    Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
+                    StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+                };
+
+                return serviceResult;
+            }
+            else
             {
-                Data = pagedResponse,
-                Success = pagedResponse.Data.Any(),
-                Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
-                StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
-            };
+                var user = await _userService.GetUser();
+                var (filteredTodos, totalCount) = await _todoRepository.GetFilteredTodosAsync(queryParameters, user!.NormalizedEmail);
 
-            return serviceResult;
+                var pagedResponse = new PagedResponse<TodoResponse>
+                {
+                    Data = _mapper.Map<List<TodoResponse>>(filteredTodos),
+                    Page = queryParameters.Page,
+                    Limit = queryParameters.Limit,
+                    Total = totalCount
+                };
+
+                var serviceResult = new ServiceResult<PagedResponse<TodoResponse>>()
+                {
+                    Data = pagedResponse,
+                    Success = pagedResponse.Data.Any(),
+                    Message = pagedResponse.Data.Any() ? "Todos retrieved" : "Todos not found",
+                    StatusCode = pagedResponse.Data.Any() ? StatusCodes.Status200OK : StatusCodes.Status404NotFound
+                };
+
+                return serviceResult;
+            }
         }
 
         public async Task<ServiceResult<TodoResponse>> CreateTodoAsync(CreateTodoRequest createTodoRequest)
@@ -150,11 +188,10 @@ namespace TodoList.Server.Services.TodoService
         public async Task<ServiceResult<bool?>> UpdateTodoAsync(UpdateTodoRequest updateTodoRequest)
         {
             var serviceResult = new ServiceResult<bool?>();
+            var user = await _userService.GetUser();
 
             try
             {
-                var user = await _userService.GetUser();
-
                 if (user == null)
                 {
                     serviceResult.Data = null;
@@ -177,7 +214,8 @@ namespace TodoList.Server.Services.TodoService
                     return serviceResult;
                 }
 
-                if (user.Id != todo.UserId)
+                //Administrator can update any record
+                if (!_userService.IsAdministrator() && user.Id != todo.UserId)
                 {
                     serviceResult.Data = null;
                     serviceResult.Success = false;
@@ -218,26 +256,52 @@ namespace TodoList.Server.Services.TodoService
         public async Task<ServiceResult<bool?>> DeleteTodoAsync(int id)
         {
             ServiceResult<bool?> serviceResult = new ServiceResult<bool?>();
+            User? user = await _userService.GetUser();
 
             try
             {
+                if (user == null)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Unable to retrieve authenticated user from context";
+                    serviceResult.StatusCode = StatusCodes.Status401Unauthorized;
+
+                    return serviceResult;
+                }
+
                 if (!await _todoRepository.ExistsAsync(id))
                 {
                     serviceResult.Data = null;
                     serviceResult.Success = false;
                     serviceResult.Message = "Todo not found";
                     serviceResult.StatusCode = StatusCodes.Status404NotFound;
-                }
-                else
-                {
-                    await _todoRepository.DeleteAsync(id);
-                    int saveResult = await _todoRepository.SaveAsync();
 
-                    serviceResult.Data = null;
-                    serviceResult.Success = saveResult > 0;
-                    serviceResult.Message = saveResult > 0 ? "Todo removed successfully" : "Unexpected value when saving";
-                    serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+                    return serviceResult;
                 }
+
+                var todo = await _todoRepository.GetAsync(id);
+
+                //Administrator can update any record
+                if (!_userService.IsAdministrator() && todo!.UserId != user.Id)
+                {
+                    serviceResult.Data = null;
+                    serviceResult.Success = false;
+                    serviceResult.Message = "Access to this Todo is forbidden";
+                    serviceResult.StatusCode = StatusCodes.Status403Forbidden;
+
+                    return serviceResult;
+                }
+
+                await _todoRepository.DeleteAsync(id);
+                int saveResult = await _todoRepository.SaveAsync();
+
+                serviceResult.Data = null;
+                serviceResult.Success = saveResult > 0;
+                serviceResult.Message = saveResult > 0 ? "Todo removed successfully" : "Unexpected value when saving";
+                serviceResult.StatusCode = saveResult > 0 ? StatusCodes.Status204NoContent : StatusCodes.Status500InternalServerError;
+
+                return serviceResult;
             }
             catch (DbUpdateException ex)
             {
@@ -246,6 +310,8 @@ namespace TodoList.Server.Services.TodoService
                 serviceResult.Message = $"Database error: {ex.Message}";
                 serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
 
+                return serviceResult;
+
             }
             catch (Exception ex)
             {
@@ -253,9 +319,9 @@ namespace TodoList.Server.Services.TodoService
                 serviceResult.Success = false;
                 serviceResult.Message = $"Unexpected error: {ex.Message}";
                 serviceResult.StatusCode = StatusCodes.Status500InternalServerError;
-            }
 
-            return serviceResult;
+                return serviceResult;
+            }
         }
     }
 }
